@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:heroicons/heroicons.dart';
 import 'package:mostro_mobile/data/models/order_model.dart';
-import 'package:mostro_mobile/features/home/presentation/widgets/bottom_nav_bar.dart';
+import 'package:mostro_mobile/presentation/widgets/bottom_nav_bar.dart';
 
 class OrderDetailsScreen extends StatelessWidget {
   final OrderModel order; // Asume que tienes un modelo de orden

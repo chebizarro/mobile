@@ -1,6 +1,6 @@
 // home_event.dart
 import 'package:equatable/equatable.dart';
-import 'package:mostro_mobile/features/home/presentation/bloc/home_state.dart';
+import 'package:mostro_mobile/presentation/home/bloc/home_state.dart';
 
 abstract class HomeEvent extends Equatable {
   const HomeEvent();
