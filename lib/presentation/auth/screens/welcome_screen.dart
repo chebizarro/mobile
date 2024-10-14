@@ -40,7 +40,7 @@ class WelcomeScreen extends StatelessWidget {
               ),
               const Spacer(flex: 2),
               CustomButton(
-                text: 'START TESTING',
+                text: 'REGISTER',
                 onPressed: () {
                   Navigator.pushNamed(context, '/register');
                 },
