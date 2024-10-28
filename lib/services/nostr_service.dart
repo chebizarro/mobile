@@ -17,7 +17,7 @@ class NostrService {
   ECPrivateKey? _privateKey;
 
   final List<String> _relays = [
-    'wss://localhost:7000',
+    'ws://localhost:8088',
   ];
 
   Future<void> init() async {
