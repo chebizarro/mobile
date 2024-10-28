@@ -1,8 +1,10 @@
 import 'package:dart_nostr/dart_nostr.dart';
+import 'package:mostro_mobile/data/repositories/order_repository_iface.dart';
 import '../../features/home/data/models/order_model.dart';
 import 'package:convert/convert.dart';
 
-class OrderRepository {
+class OrderRepository implements IOrderRepository {
+  @override
   Future<List<OrderModel>> getOrdersFromNostr() async {
     List<OrderModel> orders = [];
 
