@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:heroicons/heroicons.dart';
+import 'package:mostro_mobile/presentation/home/bloc/home_bloc.dart';
 import 'package:mostro_mobile/presentation/home/bloc/home_event.dart';
 import 'package:mostro_mobile/presentation/home/bloc/home_state.dart';
 import 'package:mostro_mobile/presentation/widgets/bottom_nav_bar.dart';
 import 'package:mostro_mobile/presentation/widgets/custom_app_bar.dart';
+import 'package:mostro_mobile/presentation/widgets/order_filter.dart';
 import 'package:mostro_mobile/presentation/widgets/order_list.dart';
-import '../bloc/home_bloc.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -33,7 +34,7 @@ class HomeScreen extends StatelessWidget {
           child: Column(
             children: [
               _buildTabs(),
-              _buildFilterButton(),
+              _buildFilterButton(context),
               const SizedBox(height: 6.0),
               Expanded(
                 child: _buildOrderList(),
@@ -101,13 +102,24 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFilterButton() {
+  Widget _buildFilterButton(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
           OutlinedButton.icon(
-            onPressed: () {},
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                backgroundColor: Colors.transparent,
+                builder: (BuildContext context) {
+                  return Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: OrderFilter(),
+                  );
+                },
+              );
+            },
             icon: const HeroIcon(HeroIcons.funnel,
                 style: HeroIconStyle.outline, color: Colors.white),
             label: const Text("FILTER", style: TextStyle(color: Colors.white)),
