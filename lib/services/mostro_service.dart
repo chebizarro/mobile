@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:dart_nostr/nostr/model/request/filter.dart';
 import 'package:mostro_mobile/core/config.dart';
+import 'package:mostro_mobile/data/models/mostro_message.dart';
 import 'package:mostro_mobile/data/models/order_model.dart';
 import 'package:mostro_mobile/services/mostro_action.dart';
 import 'package:mostro_mobile/services/nostr_service.dart';
@@ -22,7 +23,8 @@ class MostroService {
         },
       },
     });
-    final event = await _nostrService.createNIP59Event(content, Config.mostroPubKey);
+    final event =
+        await _nostrService.createNIP59Event(content, Config.mostroPubKey);
     await _nostrService.publishEvent(event);
   }
 
@@ -35,7 +37,8 @@ class MostroService {
         'content': null,
       },
     });
-    final event = await _nostrService.createNIP59Event(content, Config.mostroPubKey);
+    final event =
+        await _nostrService.createNIP59Event(content, Config.mostroPubKey);
     await _nostrService.publishEvent(event);
   }
 
@@ -48,7 +51,8 @@ class MostroService {
         'content': amount != null ? {'amount': amount} : null,
       },
     });
-    final event = await _nostrService.createNIP59Event(content, Config.mostroPubKey);
+    final event =
+        await _nostrService.createNIP59Event(content, Config.mostroPubKey);
     await _nostrService.publishEvent(event);
   }
 
@@ -61,13 +65,14 @@ class MostroService {
         'content': amount != null ? {'amount': amount} : null,
       },
     });
-    final event = await _nostrService.createNIP59Event(content, Config.mostroPubKey);
+    final event =
+        await _nostrService.createNIP59Event(content, Config.mostroPubKey);
     await _nostrService.publishEvent(event);
   }
 
   Stream<OrderModel> subscribeToOrders() {
     DateTime filterTime = DateTime.now().subtract(Duration(hours: 24));
-    
+
     var filter = NostrFilter(
       kinds: const [38383],
       since: filterTime,
@@ -88,7 +93,8 @@ class MostroService {
         'content': null,
       },
     });
-    final event = await _nostrService.createNIP59Event(content, Config.mostroPubKey);
+    final event =
+        await _nostrService.createNIP59Event(content, Config.mostroPubKey);
     await _nostrService.publishEvent(event);
   }
 
@@ -101,7 +107,25 @@ class MostroService {
         'content': null,
       },
     });
-    final event = await _nostrService.createNIP59Event(content, Config.mostroPubKey);
+    final event =
+        await _nostrService.createNIP59Event(content, Config.mostroPubKey);
+    await _nostrService.publishEvent(event);
+  }
+
+  Future<void> sendMessage<T extends MostroAction>(
+      T action, String orderId) async {
+    final message = MostroMessage(action: action, requestId: orderId.hashCode);
+
+    final content = jsonEncode({
+      'order': {
+        'version': mostroVersion,
+        'id': orderId,
+        'action': action.value,
+        'content': null,
+      },
+    });
+    final event =
+        await _nostrService.createNIP59Event(content, Config.mostroPubKey);
     await _nostrService.publishEvent(event);
   }
 }
