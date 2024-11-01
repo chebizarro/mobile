@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'exchange_service.dart';
 
 class YadioExchangeService extends ExchangeService {
@@ -56,4 +60,19 @@ class YadioExchangeService extends ExchangeService {
   }
 
 
+}
+
+extension ConversionResultExtension on ConversionResult {
+  Map<String, dynamic> toJson() {
+    return {
+      'request': {
+        'amount': request.amount,
+        'from': request.from,
+        'to': request.to,
+      },
+      'result': result,
+      'rate': rate,
+      'timestamp': timestamp,
+    };
+  }
 }

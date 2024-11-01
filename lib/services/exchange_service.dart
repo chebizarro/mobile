@@ -58,7 +58,7 @@ abstract class ExchangeService {
 
   Future<ConversionResult?> _performApiCall(
       int amount, String from, String to) async {
-    final String endpoint = '$_baseUrl/convert/$amount/$from/$to';
+    final String endpoint = '$baseUrl/convert/$amount/$from/$to';
     final Uri url = Uri.parse(endpoint);
 
     try {
@@ -82,17 +82,3 @@ abstract class ExchangeService {
   }
 }
 
-extension ConversionResultExtension on ConversionResult {
-  Map<String, dynamic> toJson() {
-    return {
-      'request': {
-        'amount': request.amount,
-        'from': request.from,
-        'to': request.to,
-      },
-      'result': result,
-      'rate': rate,
-      'timestamp': timestamp,
-    };
-  }
-}
