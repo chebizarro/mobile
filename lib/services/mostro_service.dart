@@ -2,7 +2,10 @@ import 'dart:convert';
 import 'package:dart_nostr/nostr/model/request/filter.dart';
 import 'package:mostro_mobile/core/config.dart';
 import 'package:mostro_mobile/data/models/order_model.dart';
+import 'package:mostro_mobile/services/mostro_action.dart';
 import 'package:mostro_mobile/services/nostr_service.dart';
+
+const int mostroVersion = 1;
 
 class MostroService {
   final NostrService _nostrService;
@@ -12,8 +15,8 @@ class MostroService {
   Future<void> publishOrder(OrderModel order) async {
     final content = jsonEncode({
       'order': {
-        'version': 1,
-        'action': 'new-order',
+        'version': mostroVersion,
+        'action': MostroAction.newOrder.value,
         'content': {
           'order': order.toJson(),
         },
@@ -26,9 +29,9 @@ class MostroService {
   Future<void> cancelOrder(String orderId) async {
     final content = jsonEncode({
       'order': {
-        'version': 1,
+        'version': mostroVersion,
         'id': orderId,
-        'action': 'cancel',
+        'action': MostroAction.cancel,
         'content': null,
       },
     });
@@ -39,9 +42,9 @@ class MostroService {
   Future<void> takeSellOrder(String orderId, {int? amount}) async {
     final content = jsonEncode({
       'order': {
-        'version': 1,
+        'version': mostroVersion,
         'id': orderId,
-        'action': 'take-sell',
+        'action': MostroAction.takeSell.value,
         'content': amount != null ? {'amount': amount} : null,
       },
     });
@@ -52,9 +55,9 @@ class MostroService {
   Future<void> takeBuyOrder(String orderId, {int? amount}) async {
     final content = jsonEncode({
       'order': {
-        'version': 1,
+        'version': mostroVersion,
         'id': orderId,
-        'action': 'take-buy',
+        'action': MostroAction.takeBuy.value,
         'content': amount != null ? {'amount': amount} : null,
       },
     });
@@ -79,9 +82,9 @@ class MostroService {
   Future<void> sendFiatSent(String orderId) async {
     final content = jsonEncode({
       'order': {
-        'version': 1,
+        'version': mostroVersion,
         'id': orderId,
-        'action': 'fiat-sent',
+        'action': MostroAction.fiatSent.value,
         'content': null,
       },
     });
@@ -92,9 +95,9 @@ class MostroService {
   Future<void> releaseOrder(String orderId) async {
     final content = jsonEncode({
       'order': {
-        'version': 1,
+        'version': mostroVersion,
         'id': orderId,
-        'action': 'release',
+        'action': MostroAction.release.value,
         'content': null,
       },
     });
