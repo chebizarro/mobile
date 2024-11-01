@@ -1,10 +1,11 @@
-import 'package:mostro_mobile/services/mostro_action.dart';
+import 'package:mostro_mobile/data/models/enums/action.dart';
+import 'package:mostro_mobile/data/models/content.dart';
 import 'package:mostro_mobile/services/mostro_service.dart';
 
-class MostroMessage<T> {
+class MostroMessage<T extends Content> {
   final int version = mostroVersion;
-  final int requestId;
-  final MostroAction action;
+  final String? requestId;
+  final Action action;
   T? content;
 
   MostroMessage({required this.action, required this.requestId, this.content});
@@ -15,7 +16,7 @@ class MostroMessage<T> {
         'version': mostroVersion,
         'id': requestId,
         'action': action.value,
-        'content': null,
+        'content': content?.toJson(),
       },
     };
   }
