@@ -3,7 +3,7 @@ import 'package:dart_nostr/nostr/model/request/filter.dart';
 import 'package:mostro_mobile/core/config.dart';
 import 'package:mostro_mobile/data/models/mostro_message.dart';
 import 'package:mostro_mobile/data/models/order_model.dart';
-import 'package:mostro_mobile/services/mostro_action.dart';
+import 'package:mostro_mobile/data/models/enums/action.dart';
 import 'package:mostro_mobile/services/nostr_service.dart';
 
 const int mostroVersion = 1;
@@ -17,7 +17,7 @@ class MostroService {
     final content = jsonEncode({
       'order': {
         'version': mostroVersion,
-        'action': MostroAction.newOrder.value,
+        'action': Action.newOrder.value,
         'content': {
           'order': order.toJson(),
         },
@@ -33,7 +33,7 @@ class MostroService {
       'order': {
         'version': mostroVersion,
         'id': orderId,
-        'action': MostroAction.cancel,
+        'action': Action.cancel,
         'content': null,
       },
     });
@@ -47,7 +47,7 @@ class MostroService {
       'order': {
         'version': mostroVersion,
         'id': orderId,
-        'action': MostroAction.takeSell.value,
+        'action': Action.takeSell.value,
         'content': amount != null ? {'amount': amount} : null,
       },
     });
@@ -61,7 +61,7 @@ class MostroService {
       'order': {
         'version': mostroVersion,
         'id': orderId,
-        'action': MostroAction.takeBuy.value,
+        'action': Action.takeBuy.value,
         'content': amount != null ? {'amount': amount} : null,
       },
     });
@@ -89,7 +89,7 @@ class MostroService {
       'order': {
         'version': mostroVersion,
         'id': orderId,
-        'action': MostroAction.fiatSent.value,
+        'action': Action.fiatSent.value,
         'content': null,
       },
     });
@@ -103,7 +103,7 @@ class MostroService {
       'order': {
         'version': mostroVersion,
         'id': orderId,
-        'action': MostroAction.release.value,
+        'action': Action.release.value,
         'content': null,
       },
     });
@@ -112,20 +112,15 @@ class MostroService {
     await _nostrService.publishEvent(event);
   }
 
-  Future<void> sendMessage<T extends MostroAction>(
-      T action, String orderId) async {
-    final message = MostroMessage(action: action, requestId: orderId.hashCode);
+  Future<void> sendOrder(Action action, String orderId) async {
+    final message = MostroMessage(action: action, requestId: orderId);
 
-    final content = jsonEncode({
-      'order': {
-        'version': mostroVersion,
-        'id': orderId,
-        'action': action.value,
-        'content': null,
-      },
-    });
+    final content = jsonEncode(message.toJson());
+
     final event =
         await _nostrService.createNIP59Event(content, Config.mostroPubKey);
     await _nostrService.publishEvent(event);
+
   }
+
 }

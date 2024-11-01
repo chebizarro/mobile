@@ -1,4 +1,4 @@
-enum MostroAction {
+enum Action {
   newOrder('new-order'),
   takeSell('take-sell'),
   takeBuy('take-buy'),
@@ -48,5 +48,5 @@ enum MostroAction {
 
   final String value;
 
-  const MostroAction(this.value);
+  const Action(this.value);
 }
