@@ -1,6 +1,8 @@
+import 'package:dart_nostr/nostr/model/event/event.dart';
 import 'package:mostro_mobile/data/models/enums/kind.dart';
 import 'package:mostro_mobile/data/models/enums/status.dart';
 import 'package:mostro_mobile/data/models/content.dart';
+import 'package:mostro_mobile/data/models/nostr_event.dart';
 
 class Order implements Content {
   final String? id;
@@ -94,6 +96,23 @@ class Order implements Content {
       sellerToken: json['seller_token'] as int?,
     );
   }
+
+  factory Order.fromEvent(NostrEvent event) {
+    return Order(
+      id: event.orderId,
+      kind: Kind.fromString(event.orderType!),
+      status: Status.fromString(event.status!),
+      amount: event.amount as int,
+      fiatCode: event.currency!,
+      fiatAmount: event.fiatAmount as int,
+      paymentMethod: "", //event.paymentMethods,
+      premium: event.premium as int,
+      createdAt: event.createdAt as int,
+      expiresAt: event.expiration as int?,
+    );
+  }
+
+
 
   @override
   String get type => 'order';

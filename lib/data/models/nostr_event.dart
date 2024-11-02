@@ -22,7 +22,7 @@ extension NostrEventExtensions on NostrEvent {
   String? get bond => _getTagValue('bond');
   String? get expiration => _getTagValue('expiration');
   String? get platform => _getTagValue('y');
-  Order? get order => Order.fromJson(jsonDecode(_getTagValue('z')!));
+  Order? get document => Order.fromJson(jsonDecode(_getTagValue('z')!));
 
   String? _getTagValue(String key) {
     final tag = tags?.firstWhere((t) => t[0] == key, orElse: () => []);

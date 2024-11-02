@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:heroicons/heroicons.dart';
 import 'package:mostro_mobile/data/models/order_model.dart';
 import 'package:mostro_mobile/presentation/order/bloc/order_details_bloc.dart';
@@ -45,23 +46,10 @@ class OrderDetailsScreen extends StatelessWidget {
           icon: const HeroIcon(HeroIcons.arrowLeft, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title:
-            const Text('ORDER DETAILS', style: TextStyle(color: Colors.white)),
-        actions: [
-          IconButton(
-            icon: const HeroIcon(HeroIcons.plus, color: Colors.white),
-            onPressed: () {
-              // Implementar lógica para añadir
-            },
-          ),
-          IconButton(
-            icon: const HeroIcon(HeroIcons.bolt,
-                style: HeroIconStyle.solid, color: Color(0xFF8CC541)),
-            onPressed: () {
-              // Implementar lógica para acción de rayo
-            },
-          ),
-        ],
+        title: Text('ORDER DETAILS',
+            style: TextStyle(
+                color: Colors.white,
+                fontFamily: GoogleFonts.robotoCondensed().fontFamily)),
       ),
       body: Column(
         children: [
