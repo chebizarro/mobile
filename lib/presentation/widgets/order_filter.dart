@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:heroicons/heroicons.dart';
 import 'package:mostro_mobile/core/theme/app_theme.dart';
+import 'package:mostro_mobile/presentation/widgets/group_box.dart';
 
 class OrderFilter extends StatelessWidget {
   const OrderFilter({super.key});
@@ -29,43 +31,42 @@ class OrderFilter extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(Icons.filter_list, color: AppTheme.dark2, size: 20),
+                  const HeroIcon(HeroIcons.funnel,
+                      style: HeroIconStyle.outline, color: AppTheme.dark2),
                   SizedBox(width: 8),
                   Text(
                     'FILTER',
-                    style: Theme.of(context).textTheme.headlineSmall!.copyWith(
+                    style: AppTheme.theme.textTheme.headlineSmall!.copyWith(
                       color: AppTheme.dark2,
                     ),
                   ),
                 ],
               ),
-              Icon(Icons.close, color: AppTheme.dark2, size: 20),
+              IconButton(
+                icon: Icon(Icons.close, color: AppTheme.dark2, size: 20),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
             ],
           ),
           SizedBox(height: 20),
-          buildDropdownSection(context, 'Fiat currencies', 'VES, MXN, ARS'),
-          buildDropdownSection(context, 'Payment methods', 'REVOLUT, BANK TRANSFER, CASH'),
-          buildDropdownSection(context, 'Countries', 'MX, VE, AR, CO, SV'),
-          buildDropdownSection(context, 'Rating', '4+'),
+          buildDropdownSection(context, 'Fiat currencies', ''),
+          buildDropdownSection(context, 'Payment methods', ''),
+          buildDropdownSection(context, 'Countries', ''),
+          buildDropdownSection(context, 'Rating', ''),
         ],
       ),
     );
   }
 
-  Widget buildDropdownSection(BuildContext context, String title, String value) {
+  Widget buildDropdownSection(
+      BuildContext context, String title, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              color: AppTheme.mostroGreen,
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
           SizedBox(height: 4),
           Container(
             padding: EdgeInsets.symmetric(horizontal: 12),
@@ -73,29 +74,31 @@ class OrderFilter extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: AppTheme.grey),
             ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: value,
-                onChanged: (String? newValue) {},
-                items: <String>[value]
-                    .map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
+            child: GroupBox(
+                title: title,
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
                     value: value,
-                    child: Text(
-                      value,
-                      style: TextStyle(
-                        color: AppTheme.dark1,
-                        fontSize: 14,
-                      ),
+                    onChanged: (String? newValue) {},
+                    items: <String>[value]
+                        .map<DropdownMenuItem<String>>((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(
+                          value,
+                          style: TextStyle(
+                            color: AppTheme.dark1,
+                            fontSize: 14,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                    icon: Icon(
+                      Icons.arrow_drop_down,
+                      color: AppTheme.dark1,
                     ),
-                  );
-                }).toList(),
-                icon: Icon(
-                  Icons.arrow_drop_down,
-                  color: AppTheme.dark1,
-                ),
-              ),
-            ),
+                  ),
+                )),
           ),
         ],
       ),
