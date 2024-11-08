@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:heroicons/heroicons.dart';
 import 'package:mostro_mobile/presentation/home/bloc/home_bloc.dart';
 import 'package:mostro_mobile/presentation/home/bloc/home_event.dart';
@@ -8,16 +9,18 @@ import 'package:mostro_mobile/presentation/widgets/bottom_nav_bar.dart';
 import 'package:mostro_mobile/presentation/widgets/custom_app_bar.dart';
 import 'package:mostro_mobile/presentation/widgets/order_filter.dart';
 import 'package:mostro_mobile/presentation/widgets/order_list.dart';
+import 'package:flutter_portal/flutter_portal.dart';
+import 'package:mostro_mobile/providers/riverpod_providers.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // Cargar las órdenes cuando se inicia la pantalla
     context.read<HomeBloc>().add(LoadOrders());
-
-    return Scaffold(
+    return Portal(
+        child: Scaffold(
       backgroundColor: const Color(0xFF1D212C),
       appBar: const CustomAppBar(),
       body: RefreshIndicator(
@@ -37,14 +40,14 @@ class HomeScreen extends StatelessWidget {
               _buildFilterButton(context),
               const SizedBox(height: 6.0),
               Expanded(
-                child: _buildOrderList(),
+                child: _buildOrderList(ref),
               ),
               const BottomNavBar(),
             ],
           ),
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildTabs() {
@@ -107,26 +110,38 @@ class HomeScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          OutlinedButton.icon(
-            onPressed: () {
-              showModalBottomSheet(
-                context: context,
-                backgroundColor: Colors.transparent,
-                builder: (BuildContext context) {
-                  return Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: OrderFilter(),
-                  );
-                },
-              );
-            },
-            icon: const HeroIcon(HeroIcons.funnel,
-                style: HeroIconStyle.outline, color: Colors.white),
-            label: const Text("FILTER", style: TextStyle(color: Colors.white)),
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: Colors.white),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+          PortalTarget(
+            visible: false,
+            anchor: Aligned(
+              follower: Alignment.topLeft,
+              target: Alignment.bottomCenter,
+            ),
+            portalFollower: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: OrderFilter(),
+            ),
+            child: OutlinedButton.icon(
+              onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  backgroundColor: Colors.transparent,
+                  builder: (BuildContext context) {
+                    return Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: OrderFilter(),
+                    );
+                  },
+                );
+              },
+              icon: const HeroIcon(HeroIcons.funnel,
+                  style: HeroIconStyle.outline, color: Colors.white),
+              label:
+                  const Text("FILTER", style: TextStyle(color: Colors.white)),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Colors.white),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
               ),
             ),
           ),
@@ -144,8 +159,10 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildOrderList() {
+  Widget _buildOrderList(WidgetRef ref) {
+    //final homeBloc = ref.watch(homeBlocProvider);
     return BlocBuilder<HomeBloc, HomeState>(
+      //bloc: homeBloc,
       builder: (context, state) {
         if (state.status == HomeStatus.loading) {
           return const Center(child: CircularProgressIndicator());

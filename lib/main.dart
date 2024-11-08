@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mostro_mobile/data/repositories/mostro_order_repository.dart';
 import 'package:mostro_mobile/data/repositories/order_repository_interface.dart';
 import 'package:mostro_mobile/presentation/auth/bloc/auth_state.dart';
@@ -29,10 +30,11 @@ void main() async {
 
   final biometricsHelper = BiometricsHelper();
 
-  runApp(MyApp(
-      isFirstLaunch: isFirstLaunch,
-      orderRepository: orderRepository,
-      biometricsHelper: biometricsHelper));
+  runApp(ProviderScope(
+      child: MyApp(
+          isFirstLaunch: isFirstLaunch,
+          orderRepository: orderRepository,
+          biometricsHelper: biometricsHelper)));
 }
 
 class MyApp extends StatelessWidget {
