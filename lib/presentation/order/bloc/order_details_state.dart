@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:mostro_mobile/data/models/order_model.dart';
 
-enum OrderDetailsStatus { initial, loading, loaded, error }
+enum OrderDetailsStatus { initial, loading, loaded, error, cancelled }
 
 class OrderDetailsState extends Equatable {
   final OrderDetailsStatus status;

@@ -1,23 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:heroicons/heroicons.dart';
 import 'package:mostro_mobile/data/models/order_model.dart';
 import 'package:mostro_mobile/presentation/order/bloc/order_details_bloc.dart';
 import 'package:mostro_mobile/presentation/order/bloc/order_details_event.dart';
 import 'package:mostro_mobile/presentation/order/bloc/order_details_state.dart';
-import 'package:mostro_mobile/presentation/widgets/bottom_nav_bar.dart';
+import 'package:mostro_mobile/presentation/widgets/currency_text_field.dart';
+import 'package:mostro_mobile/presentation/widgets/exchange_rate_widget.dart';
+import 'package:mostro_mobile/providers/riverpod_providers.dart';
 
-class OrderDetailsScreen extends StatelessWidget {
+class OrderDetailsScreen extends ConsumerWidget {
   final OrderModel initialOrder;
 
-  const OrderDetailsScreen({super.key, required this.initialOrder});
+  final _satsAmountController = TextEditingController();
+
+  OrderDetailsScreen({super.key, required this.initialOrder});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final orderRepo = ref.watch(ordersRepositoryProvider);
     return BlocProvider(
       create: (context) =>
-          OrderDetailsBloc()..add(LoadOrderDetails(initialOrder)),
+          OrderDetailsBloc(orderRepo)..add(LoadOrderDetails(initialOrder)),
       child: BlocBuilder<OrderDetailsBloc, OrderDetailsState>(
         builder: (context, state) {
           if (state.status == OrderDetailsStatus.loading) {
@@ -30,13 +36,13 @@ class OrderDetailsScreen extends StatelessWidget {
           if (state.order == null) {
             return const Center(child: Text('Order not found'));
           }
-          return _buildContent(context, state.order!);
+          return _buildContent(context, ref, state.order!);
         },
       ),
     );
   }
 
-  Widget _buildContent(BuildContext context, OrderModel order) {
+  Widget _buildContent(BuildContext context, WidgetRef ref, OrderModel order) {
     return Scaffold(
       backgroundColor: const Color(0xFF1D212C),
       appBar: AppBar(
@@ -46,38 +52,44 @@ class OrderDetailsScreen extends StatelessWidget {
           icon: const HeroIcon(HeroIcons.arrowLeft, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Text('ORDER DETAILS',
+        title: Text('${order.type.toUpperCase()} ORDER',
             style: TextStyle(
                 color: Colors.white,
                 fontFamily: GoogleFonts.robotoCondensed().fontFamily)),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    _buildSellerInfo(order),
-                    const SizedBox(height: 16),
-                    _buildSellerAmount(order),
-                    const SizedBox(height: 16),
-                    _buildExchangeRate(order),
-                    const SizedBox(height: 16),
-                    _buildBuyerInfo(order),
-                    const SizedBox(height: 16),
-                    _buildBuyerAmount(order),
-                    const SizedBox(height: 24),
-                    _buildActionButtons(context),
-                  ],
+      body: BlocConsumer<OrderDetailsBloc, OrderDetailsState>(
+          listener: (context, state) {
+        if (state.status == OrderDetailsStatus.cancelled) {
+          Navigator.of(context).pop();
+        }
+      }, builder: (context, state) {
+        return Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      _buildSellerInfo(order),
+                      const SizedBox(height: 16),
+                      _buildSellerAmount(order, ref),
+                      const SizedBox(height: 16),
+                      ExchangeRateWidget(currency: order.fiatCurrency),
+                      const SizedBox(height: 16),
+                      _buildBuyerInfo(order),
+                      const SizedBox(height: 16),
+                      _buildBuyerAmount(order),
+                      const SizedBox(height: 24),
+                      _buildActionButtons(context),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-          const BottomNavBar(),
-        ],
-      ),
+          ],
+        );
+      }),
     );
   }
 
@@ -91,7 +103,8 @@ class OrderDetailsScreen extends StatelessWidget {
       child: Row(
         children: [
           CircleAvatar(
-            backgroundImage: NetworkImage(order.sellerAvatar),
+            backgroundColor: Colors.grey,
+            child: Text('S', style: TextStyle(color: Colors.white)),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -118,69 +131,52 @@ class OrderDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSellerAmount(OrderModel order) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF303544),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('${order.fiatAmount} ${order.fiatCurrency} (${order.premium})',
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold)),
-          Text('${order.satsAmount} sats',
-              style: const TextStyle(color: Colors.grey)),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              const HeroIcon(HeroIcons.creditCard,
-                  style: HeroIconStyle.outline, color: Colors.white, size: 16),
-              const SizedBox(width: 8),
-              Text(order.paymentMethod,
-                  style: const TextStyle(color: Colors.white)),
-            ],
+  Widget _buildSellerAmount(OrderModel order, WidgetRef ref) {
+    final exchangeRateAsyncValue =
+        ref.watch(exchangeRateProvider(order.fiatCurrency));
+    return exchangeRateAsyncValue.when(
+      loading: () => const CircularProgressIndicator(),
+      error: (error, _) => Text('Error: $error'),
+      data: (exchangeRate) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF303544),
+            borderRadius: BorderRadius.circular(12),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildExchangeRate(OrderModel order) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF303544),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text('1 BTC = \$ ${order.exchangeRate}',
-              style: const TextStyle(color: Colors.white)),
-          Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('price yado.io', style: TextStyle(color: Colors.grey)),
-              const SizedBox(width: 4),
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: Colors.grey.withOpacity(0.3),
-                  shape: BoxShape.circle,
-                ),
-                child: const HeroIcon(HeroIcons.arrowsUpDown,
-                    style: HeroIconStyle.outline,
-                    color: Colors.white,
-                    size: 12),
+              Text(
+                  '${order.fiatAmount} ${order.fiatCurrency} (${order.premium}%)',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold)),
+              Text('${order.satsAmount} sats',
+                  style: const TextStyle(color: Colors.grey)),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const HeroIcon(HeroIcons.creditCard,
+                      style: HeroIconStyle.outline,
+                      color: Colors.white,
+                      size: 16),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      order.paymentMethod,
+                      style: const TextStyle(color: Colors.grey),
+                      overflow: TextOverflow.visible,
+                      softWrap: true,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -226,11 +222,8 @@ class OrderDetailsScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('${order.buyerSatsAmount} sats',
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold)),
+          CurrencyTextField(controller: _satsAmountController, label: 'sats'),
+          const SizedBox(height: 8),
           Text('\$ ${order.buyerFiatAmount}',
               style: const TextStyle(color: Colors.grey)),
           const SizedBox(height: 8),

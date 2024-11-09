@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:heroicons/heroicons.dart';
+import 'package:mostro_mobile/core/theme/app_theme.dart';
 import 'package:mostro_mobile/presentation/order/screens/order_details_screen.dart';
 import 'package:mostro_mobile/data/models/order_model.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -56,7 +57,7 @@ class OrderListItem extends StatelessWidget {
                         Text.rich(
                           TextSpan(
                             children: [
-                              buildStyledTextSpan(
+                              _buildStyledTextSpan(
                                 'offering ',
                                 '${order.amount}',
                                 isValue: true,
@@ -77,7 +78,7 @@ class OrderListItem extends StatelessWidget {
                         Text.rich(
                           TextSpan(
                             children: [
-                              buildStyledTextSpan(
+                              _buildStyledTextSpan(
                                 'for ',
                                 '${order.fiatAmount}',
                                 isValue: true,
@@ -150,12 +151,12 @@ class OrderListItem extends StatelessWidget {
     }
   }
 
-  TextSpan buildStyledTextSpan(String label, String value,
+  TextSpan _buildStyledTextSpan(String label, String value,
       {bool isValue = false, bool isBold = false}) {
     return TextSpan(
       text: label,
       style: TextStyle(
-        color: Colors.white,
+        color: AppTheme.cream1,
         fontWeight: FontWeight.normal,
         fontSize: isValue ? 16.0 : 24.0,
         fontFamily: GoogleFonts.robotoCondensed().fontFamily,

@@ -10,7 +10,6 @@ import 'package:mostro_mobile/presentation/widgets/custom_app_bar.dart';
 import 'package:mostro_mobile/presentation/widgets/order_filter.dart';
 import 'package:mostro_mobile/presentation/widgets/order_list.dart';
 import 'package:flutter_portal/flutter_portal.dart';
-import 'package:mostro_mobile/providers/riverpod_providers.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -160,9 +159,7 @@ class HomeScreen extends ConsumerWidget {
   }
 
   Widget _buildOrderList(WidgetRef ref) {
-    //final homeBloc = ref.watch(homeBlocProvider);
     return BlocBuilder<HomeBloc, HomeState>(
-      //bloc: homeBloc,
       builder: (context, state) {
         if (state.status == HomeStatus.loading) {
           return const Center(child: CircularProgressIndicator());

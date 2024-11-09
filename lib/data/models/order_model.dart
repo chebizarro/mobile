@@ -161,7 +161,7 @@ class OrderModel {
         id: getString('d'),
         type: getString('k'),
         user: name,
-        rating: parseRating(getString('rating')),
+        rating: 0,
         ratingCount: getInt('rating_count'),
         amount: getInt('amt'),
         currency: getString('f'),

@@ -1,11 +1,14 @@
+import 'package:bitcoin_icons/bitcoin_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:heroicons/heroicons.dart';
 import 'package:mostro_mobile/presentation/add_order/bloc/add_order_bloc.dart';
 import 'package:mostro_mobile/presentation/add_order/bloc/add_order_event.dart';
 import 'package:mostro_mobile/presentation/add_order/bloc/add_order_state.dart';
 import 'package:mostro_mobile/presentation/home/bloc/home_state.dart';
-import 'package:mostro_mobile/presentation/widgets/bottom_nav_bar.dart';
-import 'package:mostro_mobile/presentation/widgets/custom_app_bar.dart';
+import 'package:mostro_mobile/presentation/widgets/currency_dropdown.dart';
+import 'package:mostro_mobile/presentation/widgets/currency_text_field.dart';
 
 class AddOrderScreen extends StatelessWidget {
   AddOrderScreen({super.key});
@@ -24,7 +27,18 @@ class AddOrderScreen extends StatelessWidget {
         builder: (context, state) {
           return Scaffold(
             backgroundColor: const Color(0xFF1D212C),
-            appBar: const CustomAppBar(),
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              leading: IconButton(
+                icon: const HeroIcon(HeroIcons.arrowLeft, color: Colors.white),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              title: Text('NEW ORDER',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontFamily: GoogleFonts.robotoCondensed().fontFamily)),
+            ),
             body: Column(
               children: [
                 Expanded(
@@ -46,7 +60,6 @@ class AddOrderScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                const BottomNavBar(),
               ],
             ),
           );
@@ -115,14 +128,14 @@ class AddOrderScreen extends StatelessWidget {
           const Text('Make sure your order is below 20K sats',
               style: TextStyle(color: Colors.grey)),
           const SizedBox(height: 16),
-          _buildDropdownField('Fiat code'),
+          CurrencyDropdown(label: 'Fiat code', onChanged: (v) {}),
           const SizedBox(height: 16),
-          _buildTextField('Fiat amount', _fiatAmountController),
+          CurrencyTextField(controller: _fiatAmountController, label: 'Fiat amount'),
           const SizedBox(height: 16),
           _buildFixedToggle(),
           const SizedBox(height: 16),
           _buildTextField('Sats amount', _satsAmountController,
-              suffix: Icons.menu),
+              suffix: Icon(BitcoinIcons.satoshi_v1_outline).icon),
           const SizedBox(height: 16),
           _buildTextField('Payment method', _paymentMethodController),
           const SizedBox(height: 32),
@@ -141,14 +154,14 @@ class AddOrderScreen extends StatelessWidget {
           const Text('Make sure your order is below 20K sats',
               style: TextStyle(color: Colors.grey)),
           const SizedBox(height: 16),
-          _buildDropdownField('Fiat code'),
+          CurrencyDropdown(label: 'Fiat code', onChanged: (v) {}),
           const SizedBox(height: 16),
-          _buildTextField('Fiat amount', _fiatAmountController),
+          CurrencyTextField(controller: _fiatAmountController, label: 'Fiat amount'),
           const SizedBox(height: 16),
           _buildFixedToggle(),
           const SizedBox(height: 16),
           _buildTextField('Sats amount', _satsAmountController,
-              suffix: Icons.menu),
+              suffix: Icon(BitcoinIcons.satoshi_v1_outline).icon),
           const SizedBox(height: 16),
           _buildTextField('Lightning Invoice without an amount',
               _lightningInvoiceController),

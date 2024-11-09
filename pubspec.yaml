@@ -59,6 +59,7 @@ dependencies:
   build_runner: ^2.4.13
   flutter_portal: ^1.1.4
   flutter_riverpod: ^2.6.1
+  bitcoin_icons: ^0.0.4
 
 dev_dependencies:
   flutter_test:
@@ -74,6 +75,8 @@ dev_dependencies:
   mockito: ^5.4.4
   integration_test:
     sdk: flutter
+  flutter_gherkin: ^2.0.0
+  gherkin: ^2.0.8
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
