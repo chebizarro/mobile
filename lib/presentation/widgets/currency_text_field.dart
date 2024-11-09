@@ -17,7 +17,7 @@ class CurrencyTextField extends StatelessWidget {
         color: const Color(0xFF1D212C),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: TextField(
+      child: TextFormField(
         controller: controller,
         keyboardType: TextInputType.numberWithOptions(decimal: true),
         inputFormatters: [
@@ -30,6 +30,12 @@ class CurrencyTextField extends StatelessWidget {
           labelText: label,
           labelStyle: const TextStyle(color: Colors.grey),
         ),
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please enter a value';
+          }
+          return null;
+        },
       ),
     );
   }

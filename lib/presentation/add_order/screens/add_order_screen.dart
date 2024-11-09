@@ -1,6 +1,7 @@
 import 'package:bitcoin_icons/bitcoin_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:heroicons/heroicons.dart';
 import 'package:mostro_mobile/presentation/add_order/bloc/add_order_bloc.dart';
@@ -9,8 +10,11 @@ import 'package:mostro_mobile/presentation/add_order/bloc/add_order_state.dart';
 import 'package:mostro_mobile/presentation/home/bloc/home_state.dart';
 import 'package:mostro_mobile/presentation/widgets/currency_dropdown.dart';
 import 'package:mostro_mobile/presentation/widgets/currency_text_field.dart';
+import 'package:mostro_mobile/providers/riverpod_providers.dart';
 
-class AddOrderScreen extends StatelessWidget {
+class AddOrderScreen extends ConsumerWidget {
+  final _formKey = GlobalKey<FormState>();
+
   AddOrderScreen({super.key});
 
   final _fiatCodeController = TextEditingController();
@@ -20,9 +24,10 @@ class AddOrderScreen extends StatelessWidget {
   final _lightningInvoiceController = TextEditingController();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final orderRepo = ref.watch(ordersRepositoryProvider);
     return BlocProvider(
-      create: (context) => AddOrderBloc(),
+      create: (context) => AddOrderBloc(orderRepo),
       child: BlocBuilder<AddOrderBloc, AddOrderState>(
         builder: (context, state) {
           return Scaffold(
@@ -48,16 +53,18 @@ class AddOrderScreen extends StatelessWidget {
                       color: const Color(0xFF303544),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Column(
-                      children: [
-                        _buildTabs(context, state),
-                        Expanded(
-                          child: state.currentType == OrderType.sell
-                              ? _buildSellForm(context)
-                              : _buildBuyForm(context),
-                        ),
-                      ],
-                    ),
+                    child: Form(
+                        key: _formKey,
+                        child: Column(
+                          children: [
+                            _buildTabs(context, state),
+                            Expanded(
+                              child: state.currentType == OrderType.sell
+                                  ? _buildSellForm(context)
+                                  : _buildBuyForm(context),
+                            ),
+                          ],
+                        )),
                   ),
                 ),
               ],
@@ -130,7 +137,8 @@ class AddOrderScreen extends StatelessWidget {
           const SizedBox(height: 16),
           CurrencyDropdown(label: 'Fiat code', onChanged: (v) {}),
           const SizedBox(height: 16),
-          CurrencyTextField(controller: _fiatAmountController, label: 'Fiat amount'),
+          CurrencyTextField(
+              controller: _fiatAmountController, label: 'Fiat amount'),
           const SizedBox(height: 16),
           _buildFixedToggle(),
           const SizedBox(height: 16),
@@ -139,7 +147,7 @@ class AddOrderScreen extends StatelessWidget {
           const SizedBox(height: 16),
           _buildTextField('Payment method', _paymentMethodController),
           const SizedBox(height: 32),
-          _buildActionButtons(context),
+          _buildActionButtons(context, OrderType.sell),
         ],
       ),
     );
@@ -156,7 +164,8 @@ class AddOrderScreen extends StatelessWidget {
           const SizedBox(height: 16),
           CurrencyDropdown(label: 'Fiat code', onChanged: (v) {}),
           const SizedBox(height: 16),
-          CurrencyTextField(controller: _fiatAmountController, label: 'Fiat amount'),
+          CurrencyTextField(
+              controller: _fiatAmountController, label: 'Fiat amount'),
           const SizedBox(height: 16),
           _buildFixedToggle(),
           const SizedBox(height: 16),
@@ -168,29 +177,8 @@ class AddOrderScreen extends StatelessWidget {
           const SizedBox(height: 16),
           _buildTextField('Payment method', _paymentMethodController),
           const SizedBox(height: 32),
-          _buildActionButtons(context),
+          _buildActionButtons(context, OrderType.sell),
         ],
-      ),
-    );
-  }
-
-  Widget _buildDropdownField(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1D212C),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: DropdownButtonFormField<String>(
-        decoration: InputDecoration(
-          border: InputBorder.none,
-          labelText: label,
-          labelStyle: const TextStyle(color: Colors.grey),
-        ),
-        dropdownColor: const Color(0xFF1D212C),
-        style: const TextStyle(color: Colors.white),
-        items: const [], // Add your fiat code options here
-        onChanged: (value) {},
       ),
     );
   }
@@ -203,7 +191,7 @@ class AddOrderScreen extends StatelessWidget {
         color: const Color(0xFF1D212C),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: TextField(
+      child: TextFormField(
         controller: controller,
         style: const TextStyle(color: Colors.white),
         decoration: InputDecoration(
@@ -212,6 +200,12 @@ class AddOrderScreen extends StatelessWidget {
           labelStyle: const TextStyle(color: Colors.grey),
           suffixIcon: suffix != null ? Icon(suffix, color: Colors.grey) : null,
         ),
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please enter a value';
+          }
+          return null;
+        },
       ),
     );
   }
@@ -231,7 +225,7 @@ class AddOrderScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context) {
+  Widget _buildActionButtons(BuildContext context, OrderType orderType) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
@@ -244,15 +238,30 @@ class AddOrderScreen extends StatelessWidget {
         const SizedBox(width: 16),
         ElevatedButton(
           onPressed: () {
-            // For now, just print the values and close the screen
-            print('Fiat Code: ${_fiatCodeController.text}');
-            print('Fiat Amount: ${_fiatAmountController.text}');
-            print('Sats Amount: ${_satsAmountController.text}');
-            print('Payment Method: ${_paymentMethodController.text}');
-            if (_lightningInvoiceController.text.isNotEmpty) {
-              print('Lightning Invoice: ${_lightningInvoiceController.text}');
+            if (_formKey.currentState?.validate() ?? false) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                    content:
+                        Text('Submitting order ${_satsAmountController.text}')),
+              );
+
+              context.read<AddOrderBloc>().add(SubmitOrder(
+                    fiatCode: _fiatCodeController.text,
+                    fiatAmount: double.parse(_fiatAmountController.text),
+                    satsAmount: int.parse(_satsAmountController.text),
+                    paymentMethod: _paymentMethodController.text,
+                    orderType: orderType,
+                  ));
+              // For now, just print the values and close the screen
+              print('Fiat Code: ${_fiatCodeController.text}');
+              print('Fiat Amount: ${_fiatAmountController.text}');
+              print('Sats Amount: ${_satsAmountController.text}');
+              print('Payment Method: ${_paymentMethodController.text}');
+              if (_lightningInvoiceController.text.isNotEmpty) {
+                print('Lightning Invoice: ${_lightningInvoiceController.text}');
+              }
+              Navigator.of(context).pop();
             }
-            Navigator.of(context).pop();
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF8CC541),
