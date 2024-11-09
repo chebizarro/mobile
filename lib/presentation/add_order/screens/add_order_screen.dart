@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:heroicons/heroicons.dart';
+import 'package:mostro_mobile/core/theme/app_theme.dart';
 import 'package:mostro_mobile/presentation/add_order/bloc/add_order_bloc.dart';
 import 'package:mostro_mobile/presentation/add_order/bloc/add_order_event.dart';
 import 'package:mostro_mobile/presentation/add_order/bloc/add_order_state.dart';
@@ -31,17 +32,17 @@ class AddOrderScreen extends ConsumerWidget {
       child: BlocBuilder<AddOrderBloc, AddOrderState>(
         builder: (context, state) {
           return Scaffold(
-            backgroundColor: const Color(0xFF1D212C),
+            backgroundColor: AppTheme.dark1,
             appBar: AppBar(
               backgroundColor: Colors.transparent,
               elevation: 0,
               leading: IconButton(
-                icon: const HeroIcon(HeroIcons.arrowLeft, color: Colors.white),
+                icon: const HeroIcon(HeroIcons.arrowLeft, color: AppTheme.cream1),
                 onPressed: () => Navigator.of(context).pop(),
               ),
               title: Text('NEW ORDER',
                   style: TextStyle(
-                      color: Colors.white,
+                      color: AppTheme.cream1,
                       fontFamily: GoogleFonts.robotoCondensed().fontFamily)),
             ),
             body: Column(
@@ -50,7 +51,7 @@ class AddOrderScreen extends ConsumerWidget {
                   child: Container(
                     margin: const EdgeInsets.fromLTRB(16, 16, 16, 16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF303544),
+                      color: AppTheme.dark2,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Form(
@@ -78,7 +79,7 @@ class AddOrderScreen extends ConsumerWidget {
   Widget _buildTabs(BuildContext context, AddOrderState state) {
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFF1D212C),
+        color: AppTheme.dark1,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(20),
           topRight: Radius.circular(20),
@@ -108,7 +109,7 @@ class AddOrderScreen extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: isActive ? const Color(0xFF303544) : const Color(0xFF1D212C),
+          color: isActive ? AppTheme.dark2 : AppTheme.dark1,
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(isActive ? 20 : 0),
             topRight: Radius.circular(isActive ? 20 : 0),
@@ -118,7 +119,7 @@ class AddOrderScreen extends ConsumerWidget {
           text,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: isActive ? Colors.white : Colors.grey,
+            color: isActive ? AppTheme.cream1 : AppTheme.grey2,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -133,7 +134,7 @@ class AddOrderScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('Make sure your order is below 20K sats',
-              style: TextStyle(color: Colors.grey)),
+              style: TextStyle(color: AppTheme.grey2)),
           const SizedBox(height: 16),
           CurrencyDropdown(label: 'Fiat code', onChanged: (v) {}),
           const SizedBox(height: 16),
@@ -160,7 +161,7 @@ class AddOrderScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('Make sure your order is below 20K sats',
-              style: TextStyle(color: Colors.grey)),
+              style: TextStyle(color: AppTheme.grey2)),
           const SizedBox(height: 16),
           CurrencyDropdown(label: 'Fiat code', onChanged: (v) {}),
           const SizedBox(height: 16),
@@ -188,17 +189,18 @@ class AddOrderScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF1D212C),
+        color: AppTheme.dark1,
         borderRadius: BorderRadius.circular(8),
       ),
       child: TextFormField(
         controller: controller,
-        style: const TextStyle(color: Colors.white),
+        style: const TextStyle(color: AppTheme.cream1),
         decoration: InputDecoration(
           border: InputBorder.none,
           labelText: label,
-          labelStyle: const TextStyle(color: Colors.grey),
-          suffixIcon: suffix != null ? Icon(suffix, color: Colors.grey) : null,
+          labelStyle: const TextStyle(color: AppTheme.grey2),
+          suffixIcon:
+              suffix != null ? Icon(suffix, color: AppTheme.grey2) : null,
         ),
         validator: (value) {
           if (value == null || value.isEmpty) {
@@ -213,7 +215,7 @@ class AddOrderScreen extends ConsumerWidget {
   Widget _buildFixedToggle() {
     return Row(
       children: [
-        const Text('Fixed', style: TextStyle(color: Colors.white)),
+        const Text('Fixed', style: TextStyle(color: AppTheme.cream1)),
         const SizedBox(width: 8),
         Switch(
           value: false, // You should manage this state in the bloc
@@ -233,7 +235,7 @@ class AddOrderScreen extends ConsumerWidget {
           onPressed: () {
             Navigator.of(context).pop();
           },
-          child: const Text('CANCEL', style: TextStyle(color: Colors.orange)),
+          child: const Text('CANCEL', style: TextStyle(color: AppTheme.red2)),
         ),
         const SizedBox(width: 16),
         ElevatedButton(
@@ -264,7 +266,7 @@ class AddOrderScreen extends ConsumerWidget {
             }
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF8CC541),
+            backgroundColor: AppTheme.mostroGreen,
           ),
           child: const Text('SUBMIT'),
         ),
