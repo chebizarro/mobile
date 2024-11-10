@@ -19,4 +19,11 @@ class LoadOrderDetails extends OrderDetailsEvent {
 
 class CancelOrder extends OrderDetailsEvent {}
 
-class ContinueOrder extends OrderDetailsEvent {}
+class ContinueOrder extends OrderDetailsEvent {
+  final OrderModel order;
+
+  const ContinueOrder(this.order);
+
+  @override
+  List<Object> get props => [order];
+}

@@ -9,6 +9,7 @@ import 'package:mostro_mobile/presentation/order/bloc/order_details_event.dart';
 import 'package:mostro_mobile/presentation/order/bloc/order_details_state.dart';
 import 'package:mostro_mobile/presentation/widgets/currency_text_field.dart';
 import 'package:mostro_mobile/presentation/widgets/exchange_rate_widget.dart';
+import 'package:mostro_mobile/providers/exchange_service_provider.dart';
 import 'package:mostro_mobile/providers/riverpod_providers.dart';
 
 class OrderDetailsScreen extends ConsumerWidget {
@@ -59,7 +60,7 @@ class OrderDetailsScreen extends ConsumerWidget {
       ),
       body: BlocConsumer<OrderDetailsBloc, OrderDetailsState>(
           listener: (context, state) {
-        if (state.status == OrderDetailsStatus.cancelled) {
+        if (state.status == OrderDetailsStatus.cancelled || state.status == OrderDetailsStatus.done) {
           Navigator.of(context).pop();
         }
       }, builder: (context, state) {
@@ -261,7 +262,7 @@ class OrderDetailsScreen extends ConsumerWidget {
         Expanded(
           child: ElevatedButton(
             onPressed: () {
-              context.read<OrderDetailsBloc>().add(ContinueOrder());
+              context.read<OrderDetailsBloc>().add(ContinueOrder(initialOrder));
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF8CC541),

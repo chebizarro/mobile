@@ -15,7 +15,6 @@ class OrderDetailsBloc extends Bloc<OrderDetailsEvent, OrderDetailsState> {
   void _onLoadOrderDetails(
       LoadOrderDetails event, Emitter<OrderDetailsState> emit) {
     emit(state.copyWith(status: OrderDetailsStatus.loading));
-    // Aquí podrías cargar información adicional si fuera necesario
     emit(state.copyWith(status: OrderDetailsStatus.loaded, order: event.order));
   }
 
@@ -26,5 +25,9 @@ class OrderDetailsBloc extends Bloc<OrderDetailsEvent, OrderDetailsState> {
   void _onContinueOrder(ContinueOrder event, Emitter<OrderDetailsState> emit) {
     
     emit(state.copyWith(status: OrderDetailsStatus.loading));
+    
+    //orderRepository.takeBuyOrder(event.order.id);
+
+    emit(state.copyWith(status: OrderDetailsStatus.done));
   }
 }
