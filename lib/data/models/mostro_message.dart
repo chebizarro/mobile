@@ -10,7 +10,12 @@ class MostroMessage<T extends Payload> {
   int? tradeIndex;
   T? _payload;
 
-  MostroMessage({required this.action, this.requestId, this.id, T? payload, this.tradeIndex})
+  MostroMessage(
+      {required this.action,
+      this.requestId,
+      this.id,
+      T? payload,
+      this.tradeIndex})
       : _payload = payload;
 
   Map<String, dynamic> toJson() {

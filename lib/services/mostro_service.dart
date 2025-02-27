@@ -4,9 +4,11 @@ import 'package:crypto/crypto.dart';
 import 'package:dart_nostr/dart_nostr.dart';
 import 'package:logger/logger.dart';
 import 'package:mostro_mobile/core/config.dart';
+import 'package:mostro_mobile/data/models/amount.dart';
 import 'package:mostro_mobile/data/models/cant_do.dart';
 import 'package:mostro_mobile/data/models/mostro_message.dart';
 import 'package:mostro_mobile/data/models/enums/action.dart';
+import 'package:mostro_mobile/data/models/payment_request.dart';
 import 'package:mostro_mobile/data/models/session.dart';
 import 'package:mostro_mobile/data/repositories/session_manager.dart';
 import 'package:mostro_mobile/features/settings/settings.dart';
@@ -81,16 +83,17 @@ class MostroService {
       String orderId, int? amount, String? lnAddress) async {
     final session = await _sessionManager.newSession(orderId: orderId);
     final order = lnAddress != null
-        ? {
-            'payment_request': [null, lnAddress, amount]
-          }
+        ? PaymentRequest(lnInvoice: lnAddress, amount: amount)
         : amount != null
-            ? {'amount': amount}
+            ? Amount(amount: amount)
             : null;
 
-    final content = newMessage(Action.takeSell, orderId, payload: order);
-    _logger.i(content);
-    await sendMessage(orderId, settings.mostroPublicKey, content);
+    final mostroMessage = MostroMessage(
+        action: Action.takeSell,
+        id: orderId,
+        payload: order,
+        tradeIndex: session.keyIndex);
+    await publishOrder(mostroMessage);
     return session;
   }
 
@@ -107,10 +110,13 @@ class MostroService {
 
   Future<Session> takeBuyOrder(String orderId, int? amount) async {
     final session = await _sessionManager.newSession(orderId: orderId);
-    final amt = amount != null ? {'amount': amount} : null;
-    final content = newMessage(Action.takeBuy, orderId, payload: amt);
-    _logger.i(content);
-    await sendMessage(orderId, settings.mostroPublicKey, content);
+    final amt = amount != null ? Amount(amount: amount) : null;
+    final mostroMessage = MostroMessage(
+        action: Action.takeBuy,
+        id: orderId,
+        tradeIndex: session.keyIndex,
+        payload: amt);
+    await publishOrder(mostroMessage);
     return session;
   }
 
@@ -125,12 +131,9 @@ class MostroService {
       final digest = sha256.convert(bytes);
       final hash = hex.encode(digest.bytes);
       final signature = session.tradeKey.sign(hash);
-      content = jsonEncode([serializedEvent, signature]);
+      content = '[$serializedEvent,"$signature"]';
     } else {
-      content = jsonEncode([
-        {'order': order.toJson()},
-        null
-      ]);
+      content = '[{"order":${jsonEncode(order.toJson())}},null]';
     }
     _logger.i('Publishing order: $content');
     final event =
@@ -159,8 +162,8 @@ class MostroService {
     return {
       'order': {
         'version': Config.mostroVersion,
-        'trade_index': null,
         'id': orderId,
+        'trade_index': null,
         'action': actionType.value,
         'payload': payload,
       },
@@ -168,24 +171,24 @@ class MostroService {
   }
 
   Future<void> sendMessage(String orderId, String receiverPubkey,
-      Map<String, dynamic> content) async {
+      Map<String, dynamic> message) async {
     try {
       final session = _sessionManager.getSessionByOrderId(orderId);
-      String finalContent;
+      String content;
       if (!session!.fullPrivacy) {
-        content['order']?['trade_index'] = session.keyIndex;
-        final sha256Digest =
-            sha256.convert(utf8.encode(jsonEncode(content['order'])));
-        final hashHex = hex.encode(sha256Digest.bytes);
-        final signature = session.tradeKey.sign(hashHex);
-        finalContent = jsonEncode([content, signature]);
+        message['order']?['trade_index'] = session.keyIndex;
+        final serializedEvent = jsonEncode(message);
+        final bytes = utf8.encode(serializedEvent);
+        final digest = sha256.convert(bytes);
+        final hash = hex.encode(digest.bytes);
+        final signature = session.tradeKey.sign(hash);
+        content = '[$serializedEvent,"$signature"]';
       } else {
-        finalContent = jsonEncode([content, null]);
+        content = '[${jsonEncode(message)},null]';
       }
-      final event =
-          await createNIP59Event(finalContent, receiverPubkey, session);
+      _logger.i('Publishing message: $content');
+      final event = await createNIP59Event(content, receiverPubkey, session);
       await _nostrService.publishEvent(event);
-      _logger.i(finalContent);
     } catch (e) {
       // catch and throw and log and stuff
       _logger.e(e);

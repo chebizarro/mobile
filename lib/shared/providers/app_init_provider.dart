@@ -5,6 +5,7 @@ import 'package:mostro_mobile/data/repositories/mostro_storage.dart';
 import 'package:mostro_mobile/features/key_manager/key_manager_provider.dart';
 import 'package:mostro_mobile/features/order/providers/order_notifier_provider.dart';
 import 'package:mostro_mobile/shared/providers/nostr_service_provider.dart';
+import 'package:mostro_mobile/shared/providers/order_repository_provider.dart';
 import 'package:mostro_mobile/shared/providers/session_manager_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -21,13 +22,14 @@ final appInitializerProvider = FutureProvider<void>((ref) async {
   final sessionManager = ref.read(sessionManagerProvider);
   await sessionManager.init();
 
+  ref.watch(orderRepositoryProvider);
+
   for (final session in sessionManager.sessions) {
     if (session.orderId != null) {
       final order = ref.watch(orderNotifierProvider(session.orderId!).notifier);
       order.reSubscribe();
     }
   }
-
 });
 
 Future<void> clearAppData(MostroStorage mostroStorage) async {
