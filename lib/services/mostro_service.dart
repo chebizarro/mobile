@@ -40,7 +40,7 @@ class MostroService {
   }
 
   void _handleIncomingEvent(NostrEvent event) async {
-    final currentSession = await _sessionNotifier.getSessionByTradeKey(
+    final currentSession = _sessionNotifier.getSessionByTradeKey(
       event.tags!.firstWhere((t) => t[0] == 'p')[1],
     );
     if (currentSession == null) return;

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:logger/logger.dart';
 import 'package:mostro_mobile/data/models/nostr_filter.dart';
 import 'package:mostro_mobile/data/repositories.dart';
+import 'package:mostro_mobile/data/repositories/event_storage.dart';
 import 'package:mostro_mobile/features/settings/settings.dart';
 import 'package:mostro_mobile/services/nostr_service.dart';
 import 'package:mostro_mobile/shared/providers/mostro_database_provider.dart';
@@ -15,6 +16,9 @@ class DesktopBackgroundService implements BackgroundService {
   bool _isRunning = false;
   late SendPort _sendPort;
 
+  // Reference to the EventStorage in the main isolate
+  late final EventStorage _eventStorage;
+
   @override
   Future<void> initialize(Settings settings) async {
     final receivePort = ReceivePort();
@@ -25,6 +29,17 @@ class DesktopBackgroundService implements BackgroundService {
     );
 
     _sendPort = await receivePort.first as SendPort;
+    
+    // Initialize main isolate's event storage
+    final db = await openMostroDatabase();
+    _eventStorage = EventStorage(db: db);
+
+    // Listen for background notifications
+    receivePort.listen((message) {
+      if (message is Map && message['command'] == 'event-stored') {
+        _eventStorage.notifyBackgroundUpdate();
+      }
+    });
   }
 
   static void _isolateEntry(List<dynamic> args) async {
@@ -72,6 +87,11 @@ class DesktopBackgroundService implements BackgroundService {
               event.id!,
               event,
             );
+            // Notify main isolate about the new event
+            mainSendPort.send({
+              'command': 'event-stored',
+              'eventId': event.id,
+            });
             if (!isAppForeground) {
               //await showLocalNotification(event);
             }
