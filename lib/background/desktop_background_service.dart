@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:isolate';
+import 'package:flutter/services.dart';
 import 'package:logger/logger.dart';
 import 'package:mostro_mobile/data/models/nostr_filter.dart';
 import 'package:mostro_mobile/data/repositories.dart';
 import 'package:mostro_mobile/features/settings/settings.dart';
-import 'package:mostro_mobile/notifications/notification_service.dart';
 import 'package:mostro_mobile/services/nostr_service.dart';
 import 'package:mostro_mobile/shared/providers/mostro_database_provider.dart';
 import 'abstract_background_service.dart';
@@ -18,11 +18,20 @@ class DesktopBackgroundService implements BackgroundService {
   @override
   Future<void> initialize(Settings settings) async {
     final receivePort = ReceivePort();
-    await Isolate.spawn(_isolateEntry, receivePort.sendPort);
+    final rootIsolateToken = ServicesBinding.rootIsolateToken!;
+    await Isolate.spawn(
+      _isolateEntry,
+      [receivePort.sendPort, rootIsolateToken],
+    );
+
     _sendPort = await receivePort.first as SendPort;
   }
 
-  static void _isolateEntry(SendPort mainSendPort) async {
+  static void _isolateEntry(List<dynamic> args) async {
+    final SendPort mainSendPort = args[0] as SendPort;
+    final RootIsolateToken rootIsolateToken = args[1] as RootIsolateToken;
+    BackgroundIsolateBinaryMessenger.ensureInitialized(rootIsolateToken);
+
     final isolateReceivePort = ReceivePort();
     mainSendPort.send(isolateReceivePort.sendPort);
 

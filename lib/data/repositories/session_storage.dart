@@ -1,72 +1,81 @@
-import 'package:mostro_mobile/data/repositories/base_storage.dart';
-import 'package:sembast/sembast.dart';
-import 'package:mostro_mobile/data/models/session.dart';
+import 'package:drift/drift.dart';
+import 'package:mostro_mobile/data/database/database.dart';
+import 'package:mostro_mobile/data/models/session.dart' as model;
 import 'package:mostro_mobile/features/key_manager/key_manager.dart';
-import 'package:sembast/utils/value_utils.dart';
 
-class SessionStorage extends BaseStorage<Session> {
+class SessionStorage {
   final KeyManager _keyManager;
+  final AppDatabase _db;
 
-  SessionStorage(
-    this._keyManager, {
-    required Database db,
-  }) : super(
-          db,
-          stringMapStoreFactory.store('sessions'),
-        );
+  SessionStorage(this._keyManager, {required AppDatabase db}) : _db = db;
 
-  @override
-  Map<String, dynamic> toDbMap(Session session) {
-    return session.toJson();
+  Future<int> putSession(model.Session session) async {
+    return await _db.into(_db.sessions).insert(
+      SessionsCompanion.insert(
+        id: session.masterKey.public,
+        pubkey: session.masterKey.public,
+        isActive: true,
+        keyIndex: session.keyIndex,
+        fullPrivacy: session.fullPrivacy,
+        createdAt: session.startTime,
+      ),
+    );
   }
 
-  @override
-  Session fromDbMap(String key, Map<String, dynamic> jsonMap) {
-    return _decodeSession(key, jsonMap);
-  }
+  Future<model.Session?> getSession(String sessionId) async {
+    final result = await (_db.select(_db.sessions)..where((s) => s.id.equals(sessionId))).getSingleOrNull();
+    if (result == null) return null;
+    
+    final masterKey = _keyManager.masterKeyPair!;
+    final tradeKey = await _keyManager.deriveTradeKeyFromIndex(result.keyIndex);
 
-  /// A specialized decode that re-derives keys or changes the map structure
-  Session _decodeSession(String key, Map<String, dynamic> map) {
-    final clone = cloneMap(map);
-
-    // Fetch Master Key from KeyManager
-    final masterKey = _keyManager.masterKeyPair;
-
-    final keyIndex = map['key_index'];
-    final tradeKey = map['trade_key'];
-
-    final tradeKeyPair = _keyManager.deriveTradeKeyPair(keyIndex);
-    if (tradeKeyPair.public != tradeKey) {
-      throw ArgumentError('Trade key does not match derived key');
+    // Validate that the derived trade key matches what was stored
+    if (result.pubkey != tradeKey.public) {
+      throw Exception('Derived trade key does not match stored session record');
     }
-    clone['trade_key'] = tradeKeyPair;
-    clone['master_key'] = masterKey;
 
-    return Session.fromJson(clone);
+    return model.Session(
+      masterKey: masterKey,
+      tradeKey: tradeKey,
+      keyIndex: result.keyIndex,
+      fullPrivacy: result.fullPrivacy,
+      startTime: result.createdAt,
+    );
   }
 
-  Future<void> putSession(Session session) async {
-    if (session.orderId == null) {
-      throw ArgumentError('Cannot store a session with an empty orderId');
-    }
-    await putItem(session.orderId!, session);
+  Future<List<model.Session>> getAllSessions() async {
+    final results = await _db.select(_db.sessions).get();
+    final masterKey = _keyManager.masterKeyPair!;
+    
+    return Future.wait(results.map((r) async {
+      final tradeKey = await _keyManager.deriveTradeKeyFromIndex(r.keyIndex);
+      
+      // Validate that the derived trade key matches what was stored
+      if (r.pubkey != tradeKey.public) {
+        throw Exception('Derived trade key does not match stored session record');
+      }
+      
+      return model.Session(
+        masterKey: masterKey,
+        tradeKey: tradeKey,
+        keyIndex: r.keyIndex,
+        fullPrivacy: r.fullPrivacy,
+        startTime: r.createdAt,
+      );
+    }));
   }
 
-  /// Shortcut to get a single session by its ID.
-  Future<Session?> getSession(String sessionId) => getItem(sessionId);
-
-  /// Shortcut to get all sessions (direct pass-through).
-  Future<List<Session>> getAllSessions() => getAllItems();
-
-  /// Shortcut to remove a specific session by its ID.
-  Future<void> deleteSession(String sessionId) => deleteItem(sessionId);
-
-  Future<List<String>> deleteExpiredSessions(
-      int sessionExpirationHours, int maxBatchSize) {
-    final now = DateTime.now();
-    return deleteWhere((session) {
-      final startTime = session.startTime;
-      return now.difference(startTime).inHours >= sessionExpirationHours;
-    }, maxBatchSize: maxBatchSize);
+  Future<int> deleteSession(String sessionId) async {
+    return await (_db.delete(_db.sessions)..where((s) => s.id.equals(sessionId))).go();
   }
+
+  Future<int> deleteAllItems() async {
+    return await (_db.delete(_db.sessions)).go();
+  }
+
+  Future<int> deleteExpiredSessions(int sessionExpirationHours) async {
+    final expirationTime = DateTime.now().subtract(Duration(hours: sessionExpirationHours));
+    return await (_db.delete(_db.sessions)..where((s) => s.createdAt.isSmallerThan(Variable(expirationTime)))).go();
+  }
+
 }

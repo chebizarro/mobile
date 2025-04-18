@@ -1,42 +1,52 @@
-import 'package:dart_nostr/dart_nostr.dart';
-import 'package:mostro_mobile/data/repositories/base_storage.dart';
-import 'package:sembast/sembast.dart';
+import 'dart:convert';
+import 'package:dart_nostr/nostr/model/event/event.dart' as nostr;
+import 'package:mostro_mobile/data/database/database.dart';
 
-class EventStorage extends BaseStorage<NostrEvent> {
-  EventStorage({
-    required Database db,
-  }) : super(
-          db,
-          stringMapStoreFactory.store('events'),
-        );
+class EventStorage {
+  final AppDatabase _db;
 
-  @override
-  NostrEvent fromDbMap(String key, Map<String, dynamic> event) {
-    return NostrEvent(
-      id: event['id'] as String,
-      kind: event['kind'] as int,
-      content: event['content'] == null ? '' : event['content'] as String,
-      sig: event['sig'] as String,
-      pubkey: event['pubkey'] as String,
-      createdAt: DateTime.fromMillisecondsSinceEpoch(
-        (event['created_at'] as int) * 1000,
-      ),
-      tags: List<List<String>>.from(
-        (event['tags'] as List)
-            .map(
-              (nestedElem) => (nestedElem as List)
-                  .map(
-                    (nestedElemContent) => nestedElemContent.toString(),
-                  )
-                  .toList(),
-            )
-            .toList(),
+  EventStorage({required AppDatabase db}) : _db = db;
+
+  Future<void> putItem(String id, nostr.NostrEvent event) async {
+    await _db.into(_db.nostrEvents).insertOnConflictUpdate(
+      NostrEventsCompanion.insert(
+        id: id,
+        pubkey: event.pubkey,
+        content: event.content ?? '',
+        createdAt: event.createdAt ?? DateTime.now(),
+        kind: event.kind ?? 0,
+        sig: event.sig ?? '',
+        tags: jsonEncode(event.tags ?? []),
       ),
     );
   }
 
-  @override
-  Map<String, dynamic> toDbMap(NostrEvent event) {
-    return event.toMap();
+  Future<nostr.NostrEvent?> getItem(String id) async {
+    final result = await (_db.select(_db.nostrEvents)..where((e) => e.id.equals(id))).getSingleOrNull();
+    if (result == null) return null;
+    
+    return nostr.NostrEvent(
+      id: result.id,
+      pubkey: result.pubkey,
+      content: result.content,
+      createdAt: result.createdAt,
+      kind: result.kind,
+      sig: result.sig,
+      tags: List<List<String>>.from(jsonDecode(result.tags)),
+    );
+  }
+
+  Stream<List<nostr.NostrEvent>> watch() {
+    return _db.select(_db.nostrEvents).watch().map((events) => events.map(
+      (e) => nostr.NostrEvent(
+        id: e.id,
+        pubkey: e.pubkey,
+        content: e.content,
+        createdAt: e.createdAt,
+        kind: e.kind,
+        sig: e.sig,
+        tags: List<List<String>>.from(jsonDecode(e.tags)),
+      ),
+    ).toList());
   }
 }

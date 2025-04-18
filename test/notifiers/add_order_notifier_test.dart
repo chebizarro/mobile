@@ -1,10 +1,10 @@
-import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mostro_mobile/data/models/enums/order_type.dart';
+import 'package:mostro_mobile/data/models/session.dart';
+import 'package:dart_nostr/dart_nostr.dart';
 import 'package:mostro_mobile/data/models/enums/status.dart';
-import 'package:mostro_mobile/data/models/mostro_message.dart';
 import 'package:mostro_mobile/data/models/order.dart';
 import 'package:mostro_mobile/features/order/providers/order_notifier_provider.dart';
 import 'package:mostro_mobile/shared/providers/mostro_service_provider.dart';
@@ -35,10 +35,15 @@ void main() {
     /// Helper that sets up the mock repository so that when `publishOrder` is
     /// called, it returns a Stream<MostroMessage> based on `confirmationJson`.
     void configureMockPublishOrder(Map<String, dynamic> confirmationJson) {
-      final confirmationMessage = MostroMessage.fromJson(confirmationJson);
       when(mockMostroService.publishOrder(any)).thenAnswer((invocation) async {
         // Return a stream that emits the confirmation message once.
-        return Stream.value(confirmationMessage);
+        return Session(
+          masterKey: NostrKeyPairs.generate(),
+          tradeKey: NostrKeyPairs.generate(),
+          keyIndex: 0,
+          fullPrivacy: false,
+          startTime: DateTime.now(),
+        );
       });
     }
 
@@ -136,7 +141,7 @@ void main() {
       configureMockPublishOrder(confirmationJsonSellRange);
 
       container = ProviderContainer(overrides: [
-        mostroRepositoryProvider.overrideWithValue(mockMostroService),
+        mostroServiceProvider.overrideWithValue(mockMostroService),
         orderRepositoryProvider.overrideWithValue(mockOrdersRepository),
       ]);
 
@@ -200,7 +205,7 @@ void main() {
       configureMockPublishOrder(confirmationJsonBuy);
 
       container = ProviderContainer(overrides: [
-        mostroRepositoryProvider.overrideWithValue(mockMostroService),
+        mostroServiceProvider.overrideWithValue(mockMostroService),
         orderRepositoryProvider.overrideWithValue(mockOrdersRepository),
       ]);
 
@@ -261,7 +266,7 @@ void main() {
       configureMockPublishOrder(confirmationJsonBuyInvoice);
 
       container = ProviderContainer(overrides: [
-        mostroRepositoryProvider.overrideWithValue(mockMostroService),
+        mostroServiceProvider.overrideWithValue(mockMostroService),
         orderRepositoryProvider.overrideWithValue(mockOrdersRepository),
       ]);
 

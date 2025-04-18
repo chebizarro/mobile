@@ -115,12 +115,12 @@ class SessionNotifier extends StateNotifier<List<Session>> {
   /// Removes sessions older than [sessionExpirationHours] from both DB and memory.
   Future<void> clearExpiredSessions() async {
     try {
-      final removedIds = await _storage.deleteExpiredSessions(
-        sessionExpirationHours,
-        maxBatchSize,
-      );
-      for (final id in removedIds) {
-        _sessions.remove(id);
+      await _storage.deleteExpiredSessions(sessionExpirationHours);
+      // Refresh sessions from storage since we can't know which ones were deleted
+      final allSessions = await _storage.getAllSessions();
+      _sessions.clear();
+      for (final session in allSessions) {
+        _sessions[session.masterKey.public] = session;
       }
       state = sessions;
     } catch (e) {

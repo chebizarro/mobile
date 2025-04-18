@@ -72,7 +72,8 @@ void main() {
       // Stub the repository’s takeBuyOrder method.
       when(mockMostroService.takeBuyOrder(any, any)).thenAnswer((_) async {
         final msg = MostroMessage.fromJson(confirmationJsonTakeBuy);
-        return Stream.value(msg);
+        await Stream.value(msg).listen((event) {}).asFuture<void>();
+        return;
       });
 
       // Override the repository provider with our mock.
@@ -97,30 +98,10 @@ void main() {
     });
 
     test('Taking a Sell Order (fixed) - buyer sends take-sell and receives add-invoice confirmation', () async {
-      final confirmationJsonTakeSell = {
-        "order": {
-          "version": 1,
-          "id": testOrderId,
-          "action": "add-invoice",
-          "payload": {
-            "order": {
-              "id": testOrderId,
-              "kind": "sell",
-              "status": "pending",
-              "amount": 0,
-              "fiat_code": "VES",
-              "fiat_amount": 100,
-              "payment_method": "face to face",
-              "premium": 1,
-              "created_at": 1698957793
-            }
-          }
-        }
-      };
 
       when(mockMostroService.takeSellOrder(any, any, any)).thenAnswer((_) async {
-        final msg = MostroMessage.fromJson(confirmationJsonTakeSell);
-        return Stream.value(msg);
+        // Just return void as the method signature requires
+        return;
       });
 
       // Override the repository provider with our mock.
@@ -149,32 +130,9 @@ void main() {
     });
 
     test('Taking a Sell Range Order - buyer sends take-sell with range payload', () async {
-      final confirmationJsonSellRange = {
-        "order": {
-          "version": 1,
-          "id": testOrderId,
-          "action": "add-invoice",
-          "payload": {
-            "order": {
-              "id": testOrderId,
-              "kind": "sell",
-              "status": "pending",
-              "amount": 0,
-              "fiat_code": "VES",
-              "min_amount": 10,
-              "max_amount": 20,
-              "fiat_amount": 15,
-              "payment_method": "face to face",
-              "premium": 1,
-              "created_at": 1698957793
-            }
-          }
-        }
-      };
 
       when(mockMostroService.takeSellOrder(any, any, any)).thenAnswer((_) async {
-        final msg = MostroMessage.fromJson(confirmationJsonSellRange);
-        return Stream.value(msg);
+        return;
       });
 
       // Override the repository provider with our mock.
@@ -201,18 +159,9 @@ void main() {
     });
 
     test('Taking a Sell Order with Lightning Address - buyer sends take-sell with LN address', () async {
-      final confirmationJsonSellLN = {
-        "order": {
-          "version": 1,
-          "id": testOrderId,
-          "action": "waiting-seller-to-pay",
-          "payload": null
-        }
-      };
 
       when(mockMostroService.takeSellOrder(any, any, any)).thenAnswer((_) async {
-        final msg = MostroMessage.fromJson(confirmationJsonSellLN);
-        return Stream.value(msg);
+        return;
       });
 
       // Override the repository provider with our mock.
