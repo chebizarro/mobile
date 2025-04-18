@@ -8,6 +8,11 @@ import 'package:path_provider/path_provider.dart';
 
 part 'database.g.dart';
 
+// Configure Drift to handle multiple database instances
+void configureDriftRuntime() {
+  driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+}
+
 @DriftDatabase(tables: [
   Orders,
   NostrEvents,
@@ -15,7 +20,10 @@ part 'database.g.dart';
   MostroMessages,
 ])
 class AppDatabase extends _$AppDatabase {
-  AppDatabase([String? path]) : super(_openConnection(path));
+  // Call configureDriftRuntime in constructor to ensure it's set for each instance
+  AppDatabase([String? path]) : super(_openConnection(path)) {
+    configureDriftRuntime();
+  }
 
   @override
   int get schemaVersion => 2;
