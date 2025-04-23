@@ -2,8 +2,6 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:mostro_mobile/core/config.dart';
 import 'package:mostro_mobile/data/models/nostr_filter.dart';
 import 'package:mostro_mobile/data/repositories/event_storage.dart';
 import 'package:mostro_mobile/features/settings/settings.dart';
@@ -15,28 +13,9 @@ bool isAppForeground = false;
 
 @pragma('vm:entry-point')
 Future<void> serviceMain(ServiceInstance service) async {
-  // If on Android, set up a permanent notification so the OS won't kill it.
+  // For Android, we rely on the AndroidConfiguration to set up the foreground service
   if (service is AndroidServiceInstance) {
-    service.setAsForegroundService();
-    const androidDetails = AndroidNotificationDetails(
-      'mostro_foreground',
-      'Mostro Foreground Service',
-      icon: '@drawable/ic_stat_notifcations',
-      priority: Priority.high,
-      importance: Importance.max,
-    );
-
-    const notificationDetails = NotificationDetails(
-      android: androidDetails,
-    );
-
-    final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
-    await flutterLocalNotificationsPlugin.show(
-      Config.notificationId,
-      'Mostro is running',
-      'Connected to Mostro serivce',
-      notificationDetails,
-    );
+    //await service.setAsForegroundService();
   }
 
   final Map<String, Map<String, dynamic>> activeSubscriptions = {};
@@ -54,24 +33,56 @@ Future<void> serviceMain(ServiceInstance service) async {
     final settingsMap = data['settings'];
     if (settingsMap == null) return;
 
-    final settings = Settings.fromJson(settingsMap);
-    await nostrService.init(settings);
+    try {
+      final settings = Settings.fromJson(settingsMap);
+      await nostrService.init(settings);
+      
+      // Notify successful initialization
+      service.invoke('on-start', {
+        'isRunning': true,
+        'initialized': true,
+      });
+    } catch (e) {
+      // Notify initialization failure
+      service.invoke('on-start', {
+        'isRunning': false,
+        'error': e.toString(),
+      });
+    }
   });
 
-  service.on('create-subscription').listen((data) {
+  service.on('create-subscription').listen((data) async {
     if (data == null || data['filters'] == null) return;
 
-    final filterMap = data['filters'];
+    try {
+      final filterMap = data['filters'];
+      final filters = filterMap.toList();
+      final request = NostrRequestX.fromJson(filters);
 
-    final filters = filterMap.toList();
+      final subscription = nostrService.subscribeToEvents(request);
+      subscription.listen(
+        (event) async {
+          if (await eventStore.hasItem(event.id!)) return;
+          await showLocalNotification(event);
+        },
+        onError: (error) {
+          // Report subscription error back to the app
+          service.invoke('subscription-error', {
+            'error': error.toString(),
+          });
+        },
+      );
 
-    final request = NostrRequestX.fromJson(filters);
-
-    final subscription = nostrService.subscribeToEvents(request);
-    subscription.listen((event) async {
-      if (await eventStore.hasItem(event.id!)) return;
-      await showLocalNotification(event);
-    });
+      // Notify successful subscription
+      service.invoke('subscription-created', {
+        'success': true,
+      });
+    } catch (e) {
+      // Notify subscription failure
+      service.invoke('subscription-error', {
+        'error': e.toString(),
+      });
+    }
   });
 
   service.on('cancel-subscription').listen((event) {
@@ -90,8 +101,10 @@ Future<void> serviceMain(ServiceInstance service) async {
     service.stopSelf();
   });
 
+  // Initial service ready notification
   service.invoke('on-start', {
     'isRunning': true,
+    'initialized': false,
   });
 }
 
