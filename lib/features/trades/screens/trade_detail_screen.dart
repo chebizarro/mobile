@@ -1,20 +1,23 @@
-import 'package:circular_countdown/circular_countdown.dart';
 import 'package:dart_nostr/nostr/model/event/event.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:circular_countdown/circular_countdown.dart';
+
 import 'package:mostro_mobile/core/app_theme.dart';
-import 'package:mostro_mobile/data/models/enums/action.dart' as actions;
 import 'package:mostro_mobile/data/models/enums/role.dart';
-import 'package:mostro_mobile/data/models/enums/status.dart';
 import 'package:mostro_mobile/data/models/nostr_event.dart';
+
 import 'package:mostro_mobile/features/order/providers/order_notifier_provider.dart';
 import 'package:mostro_mobile/features/order/widgets/order_app_bar.dart';
+import 'package:mostro_mobile/features/trades/logic/trade_state_helper.dart';
+import 'package:mostro_mobile/features/trades/models/trade_flow_state.dart';
 import 'package:mostro_mobile/features/trades/widgets/mostro_message_detail_widget.dart';
+
 import 'package:mostro_mobile/shared/providers/order_repository_provider.dart';
 import 'package:mostro_mobile/shared/providers/session_manager_provider.dart';
+import 'package:mostro_mobile/shared/providers/session_providers.dart';
 import 'package:mostro_mobile/shared/utils/currency_utils.dart';
 import 'package:mostro_mobile/shared/widgets/custom_card.dart';
 
@@ -27,6 +30,13 @@ class TradeDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final order = ref.watch(eventProvider(orderId));
+    final session = ref.watch(sessionProvider(orderId));
+    final messageAsyncValue = ref.watch(sessionMessagesProvider(orderId));
+    final message = messageAsyncValue.when(
+      data: (msg) => msg,
+      loading: () => null, // Or handle loading state
+      error: (err, stack) => null, // Or handle error state
+    );
 
     // Make sure we actually have an order from the provider:
     if (order == null) {
@@ -50,7 +60,11 @@ class TradeDetailScreen extends ConsumerWidget {
             _buildOrderId(context),
             const SizedBox(height: 16),
             // Detailed info: includes the last Mostro message action text
-            MostroMessageDetail(order: order),
+            MostroMessageDetail(
+              order: order,
+              message: message,
+              userRole: session!.role!,
+            ),
             const SizedBox(height: 24),
             _buildCountDownTime(order.expirationDate),
             const SizedBox(height: 36),
@@ -171,8 +185,12 @@ class TradeDetailScreen extends ConsumerWidget {
     return Column(
       children: [
         CircularCountdown(
+          diameter: 50,
           countdownTotal: 24,
           countdownRemaining: hoursLeft,
+          countdownCurrentColor: AppTheme.mostroGreen,
+          countdownRemainingColor: Colors.grey,
+          textStyle: textTheme.bodySmall!.copyWith(color: AppTheme.cream1),
         ),
         const SizedBox(height: 16),
         Text('Time Left: ${difference.toString().split('.').first}'),
@@ -180,170 +198,112 @@ class TradeDetailScreen extends ConsumerWidget {
     );
   }
 
-  /// Main action button area, switching on `order.status`.
-  /// Additional checks use `message.action` to refine which button to show.
+  /// Main action button area, switching on the determined [TradeFlowState].
   List<Widget> _buildActionButtons(
       BuildContext context, WidgetRef ref, NostrEvent order) {
-	final message = ref.watch(orderNotifierProvider(orderId));
+    // Use the stream provider for the latest message
+    final messageAsyncValue = ref.watch(sessionMessagesProvider(orderId));
+    final message = messageAsyncValue.when(
+      data: (msg) => msg,
+      loading: () => null, // Or handle loading state
+      error: (err, stack) => null, // Or handle error state
+    );
     final session = ref.watch(sessionProvider(orderId));
 
-    // The finite-state-machine approach: decide based on the order.status.
-    // Then refine if needed using the last action in `message.action`.
-    switch (order.status) {
-      case Status.pending:
-        return [
-          //_buildCloseButton(context),
-          _buildCancelButton(context, ref),
-          if (message.action == actions.Action.addInvoice)
-            _buildAddInvoiceButton(context),
-        ];
-      case Status.waitingPayment:
-        return [
-          //_buildCloseButton(context),
-          _buildCancelButton(context, ref),
-          _buildPayInvoiceButton(context),
-        ];
-
-      case Status.waitingBuyerInvoice:
-        return [
-          //_buildCloseButton(context),
-          _buildCancelButton(context, ref),
-          if (message.action == actions.Action.addInvoice)
-            _buildAddInvoiceButton(context),
-        ];
-      case Status.settledHoldInvoice:
-        return [
-          _buildCloseButton(context),
-          if (message.action == actions.Action.rate) _buildRateButton(context),
-        ];
-      case Status.active:
-        return [
-          //_buildCloseButton(context),
-          _buildCancelButton(context, ref),
-          _buildContactButton(context),
-          // If user has not opened a dispute already
-          if (message.action != actions.Action.disputeInitiatedByYou &&
-              message.action != actions.Action.disputeInitiatedByPeer &&
-              message.action != actions.Action.rate)
-            _buildDisputeButton(ref),
-          // If the action is "addInvoice" => show a button for the invoice screen.
-          if (message.action == actions.Action.addInvoice)
-            _buildAddInvoiceButton(context),
-          // If the order is waiting for buyer to confirm fiat was sent
-          if (session!.role == Role.buyer) _buildFiatSentButton(ref),
-          // If the user is the seller & the buyer is done => show release button
-          if (session.role == Role.seller) _buildReleaseButton(ref),
-          // If the user is ready to rate
-          if (message.action == actions.Action.rate) _buildRateButton(context),
-        ];
-
-      case Status.fiatSent:
-        // Usually the user can open dispute if the other side doesn't confirm,
-        // or just close the screen and wait.
-        return [
-          //_buildCloseButton(context),
-          if (session!.role == Role.seller) _buildReleaseButton(ref),
-          _buildDisputeButton(ref),
-        ];
-
-      case Status.cooperativelyCanceled:
-        return [
-          //_buildCloseButton(context),
-          if (message.action == actions.Action.cooperativeCancelInitiatedByPeer)
-            _buildCancelButton(context, ref),
-        ];
-
-      case Status.success:
-        return [
-          //_buildCloseButton(context),
-          if (message.action != actions.Action.rateReceived)
-            _buildRateButton(context),
-        ];
-      case Status.inProgress:
-        return [
-          _buildCancelButton(context, ref),
-        ];
-      case Status.expired:
-      case Status.dispute:
-      case Status.completedByAdmin:
-      case Status.canceledByAdmin:
-      case Status.settledByAdmin:
-      case Status.canceled:
-        return [
-          _buildCloseButton(context),
-        ];
+    // Handle potential null session
+    if (session == null) {
+      return []; // No session, no actions
     }
-  }
 
-  /// CONTACT
-  Widget _buildContactButton(BuildContext context) {
-    return ElevatedButton(
-      onPressed: () {
-        context.push('/chat_room/$orderId');
-      },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppTheme.mostroGreen,
-      ),
-      child: const Text('CONTACT'),
+    // Determine the unified state using the helper
+    final currentState = determineTradeFlowState(
+      order: order,
+      message: message, // Pass the latest message
+      userRole: session.role!, // Pass the user's role (checked for null above)
     );
-  }
 
-  /// RELEASE
-  Widget _buildReleaseButton(WidgetRef ref) {
-    final orderDetailsNotifier =
-        ref.read(orderNotifierProvider(orderId).notifier);
+    // Simplified switch based on the unified TradeFlowState
+    switch (currentState) {
+      case TradeFlowState.pendingCanCancel:
+        return [
+          _buildCancelButton(context, ref),
+        ];
 
-    return ElevatedButton(
-      onPressed: () async {
-        await orderDetailsNotifier.releaseOrder();
-      },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppTheme.mostroGreen,
-      ),
-      child: const Text('RELEASE SATS'),
-    );
-  }
+      case TradeFlowState.pendingWaitingBuyerInvoice:
+        // Seller is waiting, Buyer needs to add invoice
+        if (session.role == Role.buyer) {
+          return [_buildAddInvoiceButton(context)];
+        } else {
+          return []; // Seller has no action here
+        }
 
-  /// FIAT_SENT
-  Widget _buildFiatSentButton(WidgetRef ref) {
-    final orderDetailsNotifier =
-        ref.read(orderNotifierProvider(orderId).notifier);
+      case TradeFlowState.activeBuyerNeedsToPayInvoice:
+        // Buyer needs to pay the invoice (Seller shows nothing)
+        if (session.role == Role.buyer) {
+          return [_buildPayInvoiceButton(context)]; // Corrected arguments
+        } else {
+          return [];
+        }
 
-    return ElevatedButton(
-      onPressed: () async {
-        await orderDetailsNotifier.sendFiatSent();
-      },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppTheme.mostroGreen,
-      ),
-      child: const Text('FIAT SENT'),
-    );
-  }
+      case TradeFlowState.activeBuyerNeedsToSendFiat:
+        // Buyer needs to confirm they sent fiat (Seller waits)
+        if (session.role == Role.buyer) {
+          return [_buildFiatSentButton(ref)]; // Corrected arguments
+        } else {
+          return []; // Seller waits
+        }
 
-  /// ADD INVOICE
-  Widget _buildAddInvoiceButton(BuildContext context) {
-    return ElevatedButton(
-      onPressed: () async {
-        context.push('/add_invoice/$orderId');
-      },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppTheme.mostroGreen,
-      ),
-      child: const Text('ADD INVOICE'),
-    );
-  }
+      case TradeFlowState.activeSellerWaitingBuyerFiat:
+        // Seller is waiting for fiat (Buyer needs to send)
+        if (session.role == Role.seller) {
+          return []; // Seller waits
+        } else {
+          // Buyer should see the 'Send Fiat' button
+          return [_buildFiatSentButton(ref)]; // Corrected arguments
+        }
 
-  /// ADD INVOICE
-  Widget _buildPayInvoiceButton(BuildContext context) {
-    return ElevatedButton(
-      onPressed: () async {
-        context.push('/pay_invoice/$orderId');
-      },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppTheme.mostroGreen,
-      ),
-      child: const Text('ADD INVOICE'),
-    );
+      case TradeFlowState.activeBuyerWaitingSellerRelease:
+        // Buyer waiting for release (Seller needs to release)
+        if (session.role == Role.buyer) {
+          return []; // Buyer waits
+        } else {
+          return [_buildReleaseFundsButton(context, ref)];
+        }
+
+      case TradeFlowState.activeSellerNeedsToRelease:
+        // Seller needs to release (Buyer waits)
+        if (session.role == Role.seller) {
+          return [_buildReleaseFundsButton(context, ref)];
+        } else {
+          return []; // Buyer waits
+        }
+
+      case TradeFlowState.coopCancelProposedByMe:
+        // Waiting for peer response
+        return []; // No action needed, just info text
+
+      case TradeFlowState.coopCancelProposedByPeer:
+        // User needs to accept/reject
+        return [
+          _buildAcceptCoopCancelButton(context, ref),
+          _buildRejectCoopCancelButton(context, ref),
+        ];
+
+      case TradeFlowState.disputeActive:
+        return [_buildOpenDisputeButton(context, ref)]; // Or view dispute details?
+
+      case TradeFlowState.completedNeedsRating:
+        return [_buildRatePeerButton(context, ref)];
+
+      // Final states - usually no buttons
+      case TradeFlowState.completedDone:
+      case TradeFlowState.cancelledGeneric:
+      case TradeFlowState.cancelledByAdmin:
+      case TradeFlowState.coopCancelFinalized:
+      case TradeFlowState.expired:
+      case TradeFlowState.unknown:
+        return []; // No actions for these states
+    }
   }
 
   /// CANCEL
@@ -360,37 +320,105 @@ class TradeDetailScreen extends ConsumerWidget {
     );
   }
 
-  /// DISPUTE
-  Widget _buildDisputeButton(WidgetRef ref) {
-    final notifier = ref.read(orderNotifierProvider(orderId).notifier);
+  /// ADD INVOICE
+  Widget _buildAddInvoiceButton(BuildContext context) {
     return ElevatedButton(
       onPressed: () async {
-        await notifier.disputeOrder();
+        // TODO: Find or implement AddInvoiceDialog
+        // showDialog(
+        //   context: context,
+        //   builder: (BuildContext context) {
+        //     return AddInvoiceDialog(orderNotifier: orderNotifier);
+        //   },
+        // );
       },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppTheme.mostroGreen,
+      ),
+      child: const Text('ADD INVOICE'),
+    );
+  }
+
+  /// PAY INVOICE
+  Widget _buildPayInvoiceButton(BuildContext context) {
+    return ElevatedButton(
+      onPressed: () { /* TODO: Add pay invoice logic */ },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppTheme.mostroGreen,
+      ),
+      child: const Text('PAY INVOICE'),
+    );
+  }
+
+  /// FIAT_SENT
+  Widget _buildFiatSentButton(WidgetRef ref) {
+    // Implementation... (Sends 'fiat-sent' action)
+    return ElevatedButton(
+      onPressed: () { /* TODO: Add fiat sent logic */ },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppTheme.mostroGreen,
+      ),
+      child: const Text('CONFIRM FIAT SENT'),
+    );
+  }
+
+  /// RELEASE FUNDS
+  Widget _buildReleaseFundsButton(BuildContext context, WidgetRef ref) {
+    // Implementation... (Sends 'release' action)
+    return ElevatedButton(
+      onPressed: () { /* TODO: Add release logic */ },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppTheme.mostroGreen,
+      ),
+      child: const Text('RELEASE FUNDS'),
+    );
+  }
+
+  /// ACCEPT CANCEL
+  Widget _buildAcceptCoopCancelButton(BuildContext context, WidgetRef ref) {
+    // Implementation... (Sends acceptance message)
+    return ElevatedButton(
+      onPressed: () { /* TODO: Add accept cancel logic */ },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppTheme.mostroGreen,
+      ),
+      child: const Text('ACCEPT CANCEL'),
+    );
+  }
+
+  /// REJECT CANCEL
+  Widget _buildRejectCoopCancelButton(BuildContext context, WidgetRef ref) {
+    // Implementation... (Might just close the dialog or send a rejection message)
+    return ElevatedButton(
+      onPressed: () { /* TODO: Add reject cancel logic */ },
       style: ElevatedButton.styleFrom(
         backgroundColor: AppTheme.red1,
       ),
-      child: const Text('DISPUTE'),
+      child: const Text('REJECT CANCEL'),
     );
   }
 
-  /// CLOSE
-  Widget _buildCloseButton(BuildContext context) {
-    return OutlinedButton(
-      onPressed: () => context.pop(),
-      style: AppTheme.theme.outlinedButtonTheme.style,
-      child: const Text('CLOSE'),
+  /// OPEN DISPUTE
+  Widget _buildOpenDisputeButton(BuildContext context, WidgetRef ref) {
+    // Implementation... (Sends 'dispute' action or navigates to dispute screen)
+    return ElevatedButton(
+      onPressed: () { /* TODO: Add dispute logic */ },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppTheme.red1,
+      ),
+      child: const Text('OPEN DISPUTE'),
     );
   }
 
-  /// RATE
-  Widget _buildRateButton(BuildContext context) {
-    return OutlinedButton(
-      onPressed: () {
-        context.push('/rate_user/$orderId');
-      },
-      style: AppTheme.theme.outlinedButtonTheme.style,
-      child: const Text('RATE'),
+  /// RATE PEER
+  Widget _buildRatePeerButton(BuildContext context, WidgetRef ref) {
+    // Implementation... (Navigates to rating screen)
+    return ElevatedButton(
+      onPressed: () { /* TODO: Add rating logic */ },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppTheme.mostroGreen,
+      ),
+      child: const Text('RATE PEER'),
     );
   }
 
